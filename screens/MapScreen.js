@@ -12,9 +12,9 @@ import {PermissionsAndroid} from 'react-native';
 
 //Note to self: Issue is getting location to work.  navigator.geolocation.getCurrentPosition() works on website but not through webview due to "insecure origins" (http not https)
 //On RN Location.getCurrentPositionAsync is working but need to pass data to webview
-//eventlistener picking up webpackWarnings but not messages sent via button (injectJavaScript)
-// this.webviewRef.postMessage("hello") is sending message to webview.  need to send message with data and have it read properly (i.e. JSON.stringify)
-//Must learn how to send variable values in postMessage
+//eventlistener variables logging properly with JSON.stringify(event.data) (injectJavaScript)
+// RN button needs to get current location on press and send message to webview (web app)
+// RNMap.js in web app needs to take incoming message and setMapCenter.
 //for webview console logs: https://developerjesse.com/2021/04/07/console-logs-react-native-webview.html 
 
 const MapScreen = () => {
@@ -74,6 +74,8 @@ useEffect(() => {
         console.log("location permission granted")
       }
 
+      console.log("getforegroundpermissionsasync", Location.getForegroundPermissionsAsync())
+      console.log("getbackgroundpermissionsasync", Location.getBackgroundPermissionsAsync())
       console.log("currentLocation1: ", currentLocation)
       console.log("Location", Location.getCurrentPositionAsync())
       let currentLocation = await Location.getLastKnownPositionAsync({});
@@ -87,9 +89,9 @@ useEffect(() => {
       console.log("location", location)
       console.log("locationCenter", locationCenter)
       const testLocation = [45.4, 39.2]
-      //this.webviewRef.injectJavaScript(`setMapCenter(${locationCenter}))
+      //webviewRef.injectJavaScript(`setMapCenter(${locationCenter}))
       //console.log("locationCenterInjected: ", locationCenter`)
-      this.webviewRef.injectJavaScript(`window.ReactNativeWebView.postMessage({message: "${testLocation}"}))
+      webviewRef.injectJavaScript(`window.ReactNativeWebView.postMessage({message: "${testLocation}"}))
       console.log("locationCenterInjected: ", "${testLocation}"`)
     })();
   }, []);
@@ -110,8 +112,8 @@ useEffect(() => {
   })
 
   useEffect(() => {
-    console.log("webviewRef", this.webviewRef)
-  }, [this.webviewRef])
+    console.log("webviewRef", webviewRef)
+  }, [webviewRef])
 
   const setWebviewCenter = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -121,6 +123,7 @@ useEffect(() => {
         return;
       } else {
         console.log("location permission granted")
+        console.log("Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest, maximumAge: 10000})", Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest, maximumAge: 10000}))
       }
 
       let currentLocation = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest, maximumAge: 10000});
@@ -133,23 +136,33 @@ useEffect(() => {
       console.log("location", location)
       console.log("locationCenter", locationCenter)
 
-    this.webviewRef.injectJavaScript(`setMapCenter(${locationCenter}))
-    console.log("locationCenterInjected: ", locationCenter`)
+    // await webviewRef.injectJavaScript(`
+    // document.addEventListener('message', function(event) {console.log("testing onmessage event from injected: ", JSON.stringify(event.data))})
+    // true
+    // `)
+
     console.log("locationCenter", JSON.stringify(locationCenter))
+
+    webviewRef.postMessage(`location: ${location}`)
+    webviewRef.postMessage(`locationCenter: ${locationCenter}`)
+    webviewRef.postMessage(JSON.stringify({userLocation: locationCenter}))
   }
+
+  
 
   console.log("testing.....")
   console.log(window)
-  console.log(locationCenter)
+  console.log("locationCenter", locationCenter)
 
   const injectedFn = 
     `setMapCenter([46.95, 39]);
     true;`
 
   const sendMessageToWebView = async () => {
-    console.log("webviewRef: ", this.webviewRef)
-    console.log("injectJavaScript: ", this.webviewRef.injectJavaScript)
-    console.log("postMessage: ", this.webviewRef.injectJavaScript(`console.log("window", window.ReactNativeWebView)`))
+    console.log("webviewRef: ", webviewRef)
+    console.log("webviewRef toString", JSON.stringify(webviewRef.toString()))
+    console.log("injectJavaScript: ", webviewRef.injectJavaScript)
+    console.log("postMessage: ", webviewRef.injectJavaScript(`console.log("window", window.ReactNativeWebView)`))
 
     let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -168,17 +181,22 @@ useEffect(() => {
     //console.log("location: ", location)
     //console.log("locationCenter: ", locationCenter)
     const testLocation = [45.4, 39.2]
-    this.webviewRef.postMessage("hello")
-    this.webviewRef.injectJavaScript(`
+    webviewRef.postMessage("hello from sendMessageToWebview")
+    webviewRef.postMessage(`Location: ${testLocation}`)
+    webviewRef.injectJavaScript(`
     window.ReactNativeWebView.postMessage(JSON.stringify({message: "hello", data: ${testLocation}}))
     true
     `)
-    this.webviewRef.injectJavaScript(`
+    webviewRef.injectJavaScript(`
+    window.ReactNativeWebView.postMessage({message: "hello", data: "hellodata"})
+    true
+    `)
+    webviewRef.injectJavaScript(`
     document.ReactNativeWebView.postMessage(JSON.stringify({message: "hello", data: ${testLocation}}))
     true
     `)
-    console.log("postMessage after sending message: ", this.webviewRef.injectJavaScript(`console.log("window after postmessage", window.ReactNativeWebView)`))    
-    this.webviewRef.injectJavaScript(`
+    console.log("postMessage after sending message: ", webviewRef.injectJavaScript(`console.log("window after postmessage", window.ReactNativeWebView)`))    
+    webviewRef.injectJavaScript(`
     setMapCenter([45, 39])
     console.log(mapCenter)
     true
@@ -199,8 +217,8 @@ useEffect(() => {
   const addEventListener = `
   console.log("window: ", window)
   console.log("document: ", document)
-  window.addEventListener('message', function(event) {console.log("testing onmessage event from injected: ", JSON.stringify(event))})
-  window.ReactNativeWebView.postMessage({message: "hello"})
+  document.addEventListener('message', function(event) {console.log("testing onmessage event from injected: ", JSON.stringify(event.data))})
+  document.ReactNativeWebView.postMessage({message: "hello"})
   true
   `
 
@@ -210,7 +228,7 @@ useEffect(() => {
       <WebView
         //originWhitelist={domainUrl}
         originWhitelist={'*'}
-        ref={WEB_REF => this.webviewRef = WEB_REF}
+        ref={WEB_REF => webviewRef = WEB_REF}
         source={{ uri: allFarmstandsMap }}
         onLoad={console.log('loaded allfarmstands.com homepage')}
         javaScriptEnabled={true}
@@ -223,7 +241,7 @@ useEffect(() => {
         //ref={ ref => {
         //  webview = ref;
         //}}
-        //onLoadEnd={() => this.webviewRef.postMessage("testing")}
+        //onLoadEnd={() => webviewRef.postMessage("testing")}
         startInLoadingState={ true }
         onMessage={ event => {
           console.log("onmessage event: ", event)
@@ -246,11 +264,15 @@ useEffect(() => {
       <View  style={buttonRowStyle.container}>
         <Button style={{width:'25%', margin: 0 }} >Primary</Button>
         <Button color="secondary" style={{width:'25%', margin: 0 }} >Secondary</Button>
-        <Button color="warning" style={{width:'25%'}} >Warning</Button>
+        <Button 
+        color="warning" 
+        style={{width:'25%'}} 
+        onPress={() => sendMessageToWebView() } 
+        >Warning</Button>
         <Button 
         color="error" 
         style={{width:'25%'}} 
-        onPress={() => sendMessageToWebView() } 
+        onPress={() => setWebviewCenter() } 
         >Error</Button>
       </View>
     {/* <View>
