@@ -52,6 +52,8 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "owner": "mpollachek81"
-  }
+    "owner": "mpollachek81",
+    "sdkVersion": "48.0.0"
+  },
+  "name": "farmstandfinder"
 }

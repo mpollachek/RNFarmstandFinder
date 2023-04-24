@@ -3,7 +3,7 @@ import { WebView } from 'react-native-webview'
 import { Button } from '@rneui/themed';
 import { siteUrl, domainUrl } from '../config'
 //import GetLocation from "../components/GetLocation";
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, createRef } from 'react'
 import * as Location from 'expo-location';
 import { getGeoLocationJS } from "../components/getGeoLocationJS";
 import { changeLocation } from "../components/changeLocation";
@@ -19,13 +19,12 @@ import {PermissionsAndroid} from 'react-native';
 
 const MapScreen = () => {
 
-  //const [webviewRef, setWebviewRef] = useState(null)
-  let webviewRef
+  const webviewRef = useRef();
 
   const [location, setLocation] = useState({"coords": {"latitude": "", "longitude": ""}});
   const [locationCenter, setLocationCenter] = useState({});
   const [errorMsg, setErrorMsg] = useState("");
-  const [mapCenter, setMapCenter] = useState({})
+  //const [mapCenter, setMapCenter] = useState({})
 
   const requestLocationPermission = async () => {
     try {
@@ -57,6 +56,10 @@ const MapScreen = () => {
     console.warn(err)
     }
 }
+
+useEffect(() => {
+  webviewRef.current.reload();
+}, [])
 
 useEffect(() => {
   requestLocationPermission()
@@ -91,7 +94,7 @@ useEffect(() => {
       const testLocation = [45.4, 39.2]
       //webviewRef.injectJavaScript(`setMapCenter(${locationCenter}))
       //console.log("locationCenterInjected: ", locationCenter`)
-      webviewRef.injectJavaScript(`window.ReactNativeWebView.postMessage({message: "${testLocation}"}))
+      webviewRef.current.injectJavaScript(`window.ReactNativeWebView.postMessage({message: "${testLocation}"}))
       console.log("locationCenterInjected: ", "${testLocation}"`)
     })();
   }, []);
@@ -112,10 +115,11 @@ useEffect(() => {
   })
 
   useEffect(() => {
-    console.log("webviewRef", webviewRef)
+    console.log("webviewRef useEffect", webviewRef)
   }, [webviewRef])
 
   const setWebviewCenter = async () => {
+    console.log("webviewRef1: ", webviewRef)
     let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('Permission to access location was denied');
@@ -123,46 +127,28 @@ useEffect(() => {
         return;
       } else {
         console.log("location permission granted")
-        console.log("Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest, maximumAge: 10000})", Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest, maximumAge: 10000}))
       }
-
+      console.log("webviewRef3: ", webviewRef)
       let currentLocation = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest, maximumAge: 10000});
       console.log("currentLocation: ", currentLocation)
       setLocation(currentLocation);
-      setLocationCenter([
-        currentLocation.coords.latitude,
-        currentLocation.coords.longitude
-      ])      
-      console.log("location", location)
-      console.log("locationCenter", locationCenter)
-
-    // await webviewRef.injectJavaScript(`
-    // document.addEventListener('message', function(event) {console.log("testing onmessage event from injected: ", JSON.stringify(event.data))})
-    // true
-    // `)
-
-    console.log("locationCenter", JSON.stringify(locationCenter))
-
-    webviewRef.postMessage(`location: ${location}`)
-    webviewRef.postMessage(`locationCenter: ${locationCenter}`)
-    webviewRef.postMessage(JSON.stringify({userLocation: locationCenter}))
+      await setLocationCenter(`[
+        ${currentLocation.coords.latitude},
+        ${currentLocation.coords.longitude}
+      ]`)
+      console.log("location in setwebviewcenter", location)
+      console.log("locationCenter in setwebviewcenter", locationCenter)
+      console.log(`${locationCenter}`)
+      //webviewRef.postMessage("hello from sendMessageToWebview")
+      console.log("webviewRef2: ", webviewRef)
+      webviewRef.current.postMessage(`${locationCenter}`)
   }
-
-  
-
-  console.log("testing.....")
-  console.log(window)
-  console.log("locationCenter", locationCenter)
-
-  const injectedFn = 
-    `setMapCenter([46.95, 39]);
-    true;`
 
   const sendMessageToWebView = async () => {
     console.log("webviewRef: ", webviewRef)
-    console.log("webviewRef toString", JSON.stringify(webviewRef.toString()))
-    console.log("injectJavaScript: ", webviewRef.injectJavaScript)
-    console.log("postMessage: ", webviewRef.injectJavaScript(`console.log("window", window.ReactNativeWebView)`))
+    console.log("webviewRef toString", JSON.stringify(webviewRef.current.toString()))
+    console.log("injectJavaScript: ", webviewRef.current.injectJavaScript)
+    console.log("postMessage: ", webviewRef.current.injectJavaScript(`console.log("window", window.ReactNativeWebView)`))
 
     let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -172,45 +158,23 @@ useEffect(() => {
       } else {
         console.log("location permission granted")
       }
-    //let currentLocation = await Location.getCurrentPositionAsync({});
-    // setLocationCenter([
-    //   currentLocation.coords.latitude,
-    //   currentLocation.coords.longitude
-    // ])   
-
-    //console.log("location: ", location)
-    //console.log("locationCenter: ", locationCenter)
-    const testLocation = [45.4, 39.2]
-    webviewRef.postMessage("hello from sendMessageToWebview")
-    webviewRef.postMessage(`Location: ${testLocation}`)
-    webviewRef.injectJavaScript(`
-    window.ReactNativeWebView.postMessage(JSON.stringify({message: "hello", data: ${testLocation}}))
-    true
-    `)
-    webviewRef.injectJavaScript(`
-    window.ReactNativeWebView.postMessage({message: "hello", data: "hellodata"})
-    true
-    `)
-    webviewRef.injectJavaScript(`
-    document.ReactNativeWebView.postMessage(JSON.stringify({message: "hello", data: ${testLocation}}))
-    true
-    `)
-    console.log("postMessage after sending message: ", webviewRef.injectJavaScript(`console.log("window after postmessage", window.ReactNativeWebView)`))    
-    webviewRef.injectJavaScript(`
-    setMapCenter([45, 39])
-    console.log(mapCenter)
-    true
-    `)
-    //webviewRef.postMessage(message)
-    //webviewRef.injectJavaScript(window.removeEventListener('message', message => console.log(`message: ${message}`)));
-    //console.log("test");
+    
+    const testLocation = "[-33.87, 151.21]"
+    
+    webviewRef.current.postMessage(`${testLocation}`)
+    //webviewRef.injectJavaScript(`
+    // window.ReactNativeWebView.postMessage(JSON.stringify({message: "hello-window", data: ${testLocation}}))
+    // true
+    // `)
+    // webviewRef.injectJavaScript(`
+    // window.ReactNativeWebView.postMessage({message: "hello", data: "hellodata"})
+    // true
+    // `)
+    // webviewRef.current.injectJavaScript(`
+    // document.ReactNativeWebView.postMessage(JSON.stringify({message: "hello-document", data: ${testLocation}}))
+    // true
+    // `)
   }
-
-  function onMessage(event) {
-    console.log(event.nativeEvent.data);
-  }
-
-  let webview = null;
 
   const allFarmstandsMap = siteUrl
 
@@ -228,7 +192,7 @@ useEffect(() => {
       <WebView
         //originWhitelist={domainUrl}
         originWhitelist={'*'}
-        ref={WEB_REF => webviewRef = WEB_REF}
+        ref={WEB_REF => webviewRef.current = WEB_REF}
         source={{ uri: allFarmstandsMap }}
         onLoad={console.log('loaded allfarmstands.com homepage')}
         javaScriptEnabled={true}
