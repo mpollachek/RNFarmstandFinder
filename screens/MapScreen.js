@@ -22,7 +22,7 @@ const MapScreen = () => {
   const webviewRef = useRef();
 
   const [location, setLocation] = useState({"coords": {"latitude": "", "longitude": ""}});
-  const [locationCenter, setLocationCenter] = useState({});
+  const [locationCenter, setLocationCenter] = useState();
   const [errorMsg, setErrorMsg] = useState("");
   //const [mapCenter, setMapCenter] = useState({})
 
@@ -37,18 +37,6 @@ const MapScreen = () => {
     )
     if (granted === PermissionsAndroid.RESULTS.GRANTED) {
         console.log("You can use the location");
-        if (typeof window !== 'undefined' && typeof window.navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-            console.log(position.coords.latitude,'success');
-            },
-            (error) => {
-            console.log(error,'fail')
-            },
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 }
-        );
-        } else {console.log("problem")}
-
     } else {
         console.log("Location permission denied")
     }
@@ -66,8 +54,7 @@ useEffect(() => {
 }, [])
 
   useEffect(() => {
-    (async () => {
-      
+    (async () => {      
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('Permission to access location was denied');
@@ -76,7 +63,6 @@ useEffect(() => {
       } else {
         console.log("location permission granted")
       }
-
       console.log("getforegroundpermissionsasync", Location.getForegroundPermissionsAsync())
       console.log("getbackgroundpermissionsasync", Location.getBackgroundPermissionsAsync())
       console.log("currentLocation1: ", currentLocation)
@@ -84,18 +70,11 @@ useEffect(() => {
       let currentLocation = await Location.getLastKnownPositionAsync({});
       console.log("currentLocation2: ", currentLocation)
       setLocation(currentLocation);
-      await setLocationCenter([
-        currentLocation.coords.latitude,
-        currentLocation.coords.longitude
-      ])
-      console.log("currentLocation3: ", currentLocation)
-      console.log("location", location)
-      console.log("locationCenter", locationCenter)
-      const testLocation = [45.4, 39.2]
-      //webviewRef.injectJavaScript(`setMapCenter(${locationCenter}))
-      //console.log("locationCenterInjected: ", locationCenter`)
-      webviewRef.current.injectJavaScript(`window.ReactNativeWebView.postMessage({message: "${testLocation}"}))
-      console.log("locationCenterInjected: ", "${testLocation}"`)
+      await setLocationCenter(`[
+        ${currentLocation.coords.latitude},
+        ${currentLocation.coords.longitude}
+      ]`)
+      webviewRef.current.postMessage(`${locationCenter}`)
     })();
   }, []);
 
@@ -114,10 +93,6 @@ useEffect(() => {
     }
   })
 
-  useEffect(() => {
-    console.log("webviewRef useEffect", webviewRef)
-  }, [webviewRef])
-
   const setWebviewCenter = async () => {
     console.log("webviewRef1: ", webviewRef)
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -128,20 +103,19 @@ useEffect(() => {
       } else {
         console.log("location permission granted")
       }
-      console.log("webviewRef3: ", webviewRef)
       let currentLocation = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest, maximumAge: 10000});
-      console.log("currentLocation: ", currentLocation)
       setLocation(currentLocation);
       await setLocationCenter(`[
+        "locationCtr",
         ${currentLocation.coords.latitude},
         ${currentLocation.coords.longitude}
       ]`)
-      console.log("location in setwebviewcenter", location)
-      console.log("locationCenter in setwebviewcenter", locationCenter)
-      console.log(`${locationCenter}`)
-      //webviewRef.postMessage("hello from sendMessageToWebview")
-      console.log("webviewRef2: ", webviewRef)
-      webviewRef.current.postMessage(`${locationCenter}`)
+      console.log("locationCenter", locationCenter)
+      console.log("webviewRef.current", webviewRef.current)
+      webviewRef.current.postMessage(locationCenter)
+      //  This works! webviewRef.current.postMessage(`${locationCenter}`)
+      // somewhat works for object webviewRef.current.postMessage(JSON.stringify({locationCenter: `${locationCenter}`}))
+      //webviewRef.current.postMessage({locationCenter: `${locationCenter}`})
   }
 
   const sendMessageToWebView = async () => {
@@ -198,31 +172,9 @@ useEffect(() => {
         javaScriptEnabled={true}
         geolocationEnabled={true}
         injectedJavaScript={addEventListener}
-        // injectedJavaScript={
-        //   `setMapCenter(${locationCenter})
-        //   console.log("locationCenterInjected: ", locationCenter)`
-        // }
-        //ref={ ref => {
-        //  webview = ref;
-        //}}
-        //onLoadEnd={() => webviewRef.postMessage("testing")}
         startInLoadingState={ true }
         onMessage={ event => {
           console.log("onmessage event: ", event)
-          // let data = {}
-          // try {
-          //   data = JSON.parse(event.nativeEvent.data);
-          // } catch (e) {
-          //   console.log(e);
-          // }
-      
-          // if (data?.event && data.event === 'getCurrentPosition') {
-          //   Location.getCurrentPositionAsync((position) => {
-          //     webview.postMessage(JSON.stringify({ event: 'currentPosition', data: position }));
-          //   }, (error) => {
-          //     webview.postMessage(JSON.stringify({ event: 'currentPositionError', data: error }));
-          //   }, data.options);
-          // } 
         }}
       />
       <View  style={buttonRowStyle.container}>
