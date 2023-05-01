@@ -113,9 +113,6 @@ useEffect(() => {
       console.log("locationCenter", locationCenter)
       console.log("webviewRef.current", webviewRef.current)
       webviewRef.current.postMessage(locationCenter)
-      //  This works! webviewRef.current.postMessage(`${locationCenter}`)
-      // somewhat works for object webviewRef.current.postMessage(JSON.stringify({locationCenter: `${locationCenter}`}))
-      //webviewRef.current.postMessage({locationCenter: `${locationCenter}`})
   }
 
   const sendMessageToWebView = async () => {
