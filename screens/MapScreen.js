@@ -6,6 +6,7 @@ import { siteUrl, domainUrl } from '../config'
 import { useState, useRef, useEffect, createRef, useContext } from 'react'
 import axios from "axios";
 import * as Location from 'expo-location';
+import { Camera, CameraType } from "expo-camera";
 import { getGeoLocationJS } from "../components/getGeoLocationJS";
 import { changeLocation } from "../components/changeLocation";
 import {PermissionsAndroid} from 'react-native';
@@ -89,17 +90,30 @@ useEffect(() => {
     })();
   }, []);
 
-  /* use effect get farmstands in local map area on page load */
   useEffect(() => {
-    let timer = setTimeout(() => {
-      setRunGet(true);
-    }, 1000);
-    return () => clearTimeout(timer);
+    (async () => {
+      let { status } = await Camera.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission to access camera was denied');
+        console.log("errorMsg:", errorMsg)
+        return;
+      } else {
+        console.log("camera permission granted")
+      }
+    })();
   }, []);
 
-  useEffect(() => {
-    getFarmstands();
-  }, [runGet]);
+  /* use effect get farmstands in local map area on page load */
+  // useEffect(() => {
+  //   let timer = setTimeout(() => {
+  //     setRunGet(true);
+  //   }, 1000);
+  //   return () => clearTimeout(timer);
+  // }, []);
+
+  // useEffect(() => {
+  //   getFarmstands();
+  // }, [runGet]);
 
   /* end use effect get farmstands in local map area on page load */
 
@@ -118,48 +132,38 @@ useEffect(() => {
     }
   })
 
-  const getFarmstands = async () => {
-    if (runGet) {
-      let mapCoords = Object.values(mapCenter)
-      console.log("sidebarTypes: ", sidebarTypes)
-      console.log("mapCenter: ", mapCenter)
-      console.log("mapCenter[0]: ", mapCenter[0])
-      console.log("mapCenter[1]: ", mapCenter[1])
-      console.log("mapCenter[2]: ", mapCenter[2])
-      console.log("mapCoords: ", mapCoords)
-      console.log("mapCoords[1]: ", mapCoords[1])
-      const allFarms = await selectAllFarmstands(
-        mapCoords[1],
-        mapCoords[2],
-        boundsDistance,
-        sidebarProducts,
-        sidebarProductSearch,
-        sidebarSeasons,
-        sidebarTypes
-      );
-      // setFarmstands(allFarms);
-      //console.log("allFarms: ", allFarms );
-      // console.log("object.values allfarms[0].id: ", Object.values(allFarms)[0]._id)
-      if (allFarms) {
-        let farmsList = ["farmsList"];
-        allFarms.forEach((f) => {
-        // console.log('f: ', f)
-        farmsList.push(f);
-        // console.log('farmIdList', farmIdList)
-        });
-        setFarmstands(farmsList)
-      // setFarmIds(farmIdList);
-      // console.log("farmIds: ", farmIds)
-      } else {
-        setFarmstands(["farmsList"]);
-        // setFarmIds(["farmsList"]);
-      }
-      // console.log("current farmstands: ", farmstands);
-      // console.log("JSON stringify current farmstands: ", JSON.stringify(allFarms));
-      webviewRef.current.postMessage(JSON.stringify(farmstands))
-      setRunGet(false);
-    }
-  };
+  // const getFarmstands = async () => {
+  //   if (runGet) {
+  //     let mapCoords = Object.values(mapCenter)
+  //     console.log("sidebarTypes: ", sidebarTypes)
+  //     console.log("mapCenter: ", mapCenter)
+  //     console.log("mapCenter[0]: ", mapCenter[0])
+  //     console.log("mapCenter[1]: ", mapCenter[1])
+  //     console.log("mapCenter[2]: ", mapCenter[2])
+  //     console.log("mapCoords: ", mapCoords)
+  //     console.log("mapCoords[1]: ", mapCoords[1])
+  //     const allFarms = await selectAllFarmstands(
+  //       mapCoords[1],
+  //       mapCoords[2],
+  //       boundsDistance,
+  //       sidebarProducts,
+  //       sidebarProductSearch,
+  //       sidebarSeasons,
+  //       sidebarTypes
+  //     );
+  //     if (allFarms) {
+  //       let farmsList = ["farmsList"];
+  //       allFarms.forEach((f) => {
+  //       farmsList.push(f);
+  //       });
+  //       setFarmstands(farmsList)
+  //     } else {
+  //       setFarmstands(["farmsList"]);
+  //     }
+  //     webviewRef.current.postMessage(JSON.stringify(farmstands))
+  //     setRunGet(false);
+  //   }
+  // };
 
   const setWebviewCenter = async () => {
     console.log("webviewRef1: ", webviewRef)
@@ -253,17 +257,26 @@ useEffect(() => {
         geolocationEnabled={true}
         injectedJavaScript={addEventListener}
         startInLoadingState={ true }
+        allowFileAccessFromFileURLs={true}
+        allowUniversalAccessFromFileURLs={true}
+        allowsInlineMediaPlayback={true}
+        mediaPlaybackRequiresUserAction={false}
+        mixedContentMode={"compatibility"}
         onMessage={ event => {
           console.log("onmessage event: ", event)
         }}
       />
       <View  style={buttonRowStyle.container}>
         <Button style={{width:'25%', margin: 0 }} >Primary</Button>
-        <Button color="secondary" style={{width:'25%', margin: 0 }} >Secondary</Button>
+        <Button 
+        color="secondary" 
+        style={{width:'25%', margin: 0 }} 
+        onPress={searchThisArea}
+        >Secondary</Button>
         <Button 
         color="warning" 
         style={{width:'25%'}} 
-        onPress={getFarmstands} 
+        onPress={searchThisArea} 
         >Warning</Button>
         <Button 
         color="error" 
