@@ -11,7 +11,9 @@ import { getGeoLocationJS } from "../components/getGeoLocationJS";
 import { changeLocation } from "../components/changeLocation";
 import {PermissionsAndroid} from 'react-native';
 import { UserContext, MapContext, FarmstandsContext, SidebarContext } from "../App";
-import { selectAllFarmstands } from "../apiCalls/farmstandFilter";
+import { selectAllFarmstands } from "../apiCalls/farmstandFilter"
+import { TouchableHighlight } from "react-native";
+import { MaterialIcons } from '@expo/vector-icons';
 
 
 //import { Permission, PERMISSION_TYPE } from "../components/AppPermissions";
@@ -129,6 +131,13 @@ useEffect(() => {
     container: {
       flexDirection: 'row',
       justifyContent: 'space-evenly',
+    },
+    overlay: {
+      bottom: 100,
+      right: 40,
+      zIndex: 10,
+      position: 'absolute',
+      backgroundColor: '#FFFFFF'
     }
   })
 
@@ -202,6 +211,11 @@ useEffect(() => {
     webviewRef.current.postMessage(eventMsg)
   }
 
+  const returnToMapView = () => {
+    let eventMsg = '["mapView"]'
+    webviewRef.current.postMessage(eventMsg)
+  }
+
   const sendMessageToWebView = async () => {
     console.log("webviewRef: ", webviewRef)
     console.log("webviewRef toString", JSON.stringify(webviewRef.current.toString()))
@@ -234,6 +248,26 @@ useEffect(() => {
     // `)
   }
 
+  const handleHomePageNavigation = ( e ) => {    
+
+    if (e.nativeEvent) {
+      console.log("handleHomePageNavigation", e.nativeEvent.url)
+      console.log("domainUrl: ", domainUrl)
+      console.log("siteUrl: ", siteUrl)
+      const clickedUrl = e.nativeEvent.url;
+      console.log("url: ", clickedUrl)
+
+      if ( clickedUrl === domainUrl ) {
+        console.log("home site URL clicked")
+        let eventMsg = '["mapViewRedirect"]'
+        webviewRef.current.postMessage(eventMsg)
+        //SEND MSG to redirect to siteURL with reactnativemaps`
+        // const redirectTo = 'window.location = "' + `${siteUrl}` + '"'
+        // webviewRef.current.injectJavaScript(redirectTo)
+        // console.log("redirected to mobile site URL")
+      }}
+  }
+
   const allFarmstandsMap = siteUrl
 
   const addEventListener = `
@@ -243,6 +277,15 @@ useEffect(() => {
   document.ReactNativeWebView.postMessage({message: "hello"})
   true
   `
+
+  const onMessageHandler = (event) => {
+    console.log("onmessage event: ", event)
+    console.log("onmessage event.data: ", event.nativeEvent.data)
+    if (event.nativeEvent.data === "changeLocation") {
+      console.log("setWebviewCenter from onMessage")
+      setWebviewCenter()
+    }
+  }
 
   return(
     <View style={mapScreenStyle.container}>
@@ -262,11 +305,11 @@ useEffect(() => {
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
         mixedContentMode={"compatibility"}
-        onMessage={ event => {
-          console.log("onmessage event: ", event)
-        }}
+        onMessage={onMessageHandler}
+        //onNavigationStateChange={handleHomePageNavigation}
+        onLoadProgress={handleHomePageNavigation}
       />
-      <View  style={buttonRowStyle.container}>
+      {/* <View  style={buttonRowStyle.container}>
         <Button style={{width:'25%', margin: 0 }} >Primary</Button>
         <Button 
         color="secondary" 
@@ -283,7 +326,7 @@ useEffect(() => {
         style={{width:'25%'}} 
         onPress={setWebviewCenter}
         >Error</Button>
-      </View>
+      </View> */}
     {/* <View>
       <Button
         title="send data"
@@ -300,6 +343,24 @@ useEffect(() => {
         }}
       />
     </View> */}
+      {/* <View style={buttonRowStyle.overlay}>
+        <MaterialIcons.Button 
+        name="location-searching" 
+        size={48} 
+        color="black" 
+        onPress={() => setWebviewCenter()}
+        />
+        </View> */}
+        {/* webview location button not working after navigating */}
+        {/* create button overlay to return to map page. if rerendering webview it should fix location button issue */}      
+      {/* <View style={buttonRowStyle.overlay}>
+        <MaterialIcons.Button 
+        name="location-searching" 
+        size={48} 
+        color="black" 
+        onPress={() => returnToMapView()}
+        />
+      </View> */}
     </View>
     </View>
   )
